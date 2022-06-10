@@ -1,8 +1,9 @@
-use std::collections::HashMap;
 use std::fs;
 
 use hyper::header::AUTHORIZATION;
 use hyper::HeaderMap;
+
+use urlencoding::encode;
 
 use serde_json::Value;
 
@@ -13,9 +14,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut headers = HeaderMap::new();
     headers.insert(AUTHORIZATION, format!("Bearer {}", token).parse()?);
 
+    let query = format!("{} lang:en -is:retweet", "aaa");
+    let url = format!(
+        "https://api.twitter.com/2/tweets/search/recent?query={}",
+        encode(&query)
+    );
+
     let client = reqwest::Client::new();
     let text = client
-        .get("https://api.twitter.com/2/tweets/search/recent?query=aaa")
+        .get(url)
         .headers(headers)
         .send()
         .await?
@@ -31,10 +38,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         v["meta"]["newest_id"],
         v["meta"]["next-token"]
     );
-    if let Value::Array(data_vec)= &v["data"] {
+    if let Value::Array(data_vec) = &v["data"] {
         data_vec.iter().for_each(|item| {
             println!("{} {}", item["id"], item["text"]);
-        });  
+        });
     }
 
     Ok(())
